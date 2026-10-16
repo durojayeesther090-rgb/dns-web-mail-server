@@ -1,0 +1,60 @@
+# Lab configuration files (CentOS Stream 9, host mail1.lab.local, IP 10.244.49.2)
+# Captured from the running lab on 2026-10-16
+
+##### /etc/named.conf #####
+options {
+    directory "/var/named";
+    listen-on port 53 { 127.0.0.1; 10.244.49.2; };
+    allow-query { any; };
+    recursion yes;
+    allow-recursion { 127.0.0.1; 10.244.49.2; };
+    dnssec-validation no;
+    pid-file "/run/named/named.pid";
+};
+zone "." IN { type hint; file "named.ca"; };
+zone "lab.local" IN { type master; file "lab.local.zone"; };
+zone "49.244.10.in-addr.arpa" IN { type master; file "10.244.49.rev"; };
+
+##### /var/named/lab.local.zone #####
+$TTL 3600
+@     IN SOA dns1.lab.local. admin.lab.local. (2026101601 3600 900 604800 3600)
+@     IN NS  dns1.lab.local.
+dns1  IN A   10.244.49.2
+web1  IN A   10.244.49.2
+mail1 IN A   10.244.49.2
+www   IN CNAME web1
+mail  IN CNAME mail1
+@     IN MX 10 mail1.lab.local.
+
+##### /var/named/10.244.49.rev #####
+$TTL 3600
+@ IN SOA dns1.lab.local. admin.lab.local. (2026101601 3600 900 604800 3600)
+@ IN NS  dns1.lab.local.
+2 IN PTR mail1.lab.local.
+2 IN PTR web1.lab.local.
+2 IN PTR dns1.lab.local.
+
+##### Postfix (postconf -n, key settings) #####
+home_mailbox = Maildir/
+inet_interfaces = all
+inet_protocols = ipv4
+mydestination = $myhostname, $mydomain, localhost
+mydomain = lab.local
+myhostname = mail1.lab.local
+mynetworks = 127.0.0.0/8
+myorigin = $mydomain
+alias_maps = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+
+##### /etc/dovecot/conf.d/99-lab.conf #####
+mail_location = maildir:~/Maildir
+disable_plaintext_auth = no
+ssl = no
+ssl_cert =
+ssl_key =
+
+##### Also changed #####
+# /etc/dovecot/conf.d/10-ssl.conf: ssl_cert, ssl_key, ssl_dh lines commented out
+# /etc/resolv.conf:
+nameserver 127.0.0.1
+search lab.local
